@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <script src="http://mbostock.github.com/d3/d3.v2.js"></script>
+    <script src="wordTree.js"></script>
+    <script>
+        var chart = d3.wordtree();
+
+        d3.select(".target")
+                .datum([
+                    {name:"this is a word",value:10},
+                    {name:"this is something else",value:2},
+                    {name:"this something else",value:4}
+                ])
+                .call(chart);
+
+    </script>
+</head>
+<body>
+    <div class="target"></div>
+</body>
+</html>

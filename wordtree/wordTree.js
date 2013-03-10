@@ -3,20 +3,18 @@
 // inspired by http://www-958.ibm.com/software/data/cognos/manyeyes/page/Word_Tree.html 
 // derived from http://mbostock.github.com/d3/talk/20111018/tree.html
 
-d3.wordtree = function{
+d3.wordtree = function(){
     var margins = [20,20,20,20],
-        width = $(window).width() - margins[1] - margins[3],
-        height = $(window).height() - margins[0] - margins[2],
-        textSizeMultiplier = width/2000;
-        maxSize =0;
-        preTreeData = [];
-        postTreeData = [];
-        nameAccessor = function(d) { return d.name; };
-        valueAccessor = function(d) { return d.value; };
-        onClick = function(d) {};
-        onDragEnd = function(d) { console.log(d.name + " selected"); };
-        mouseoverText = function(d) { return d.name; };
-        maxResults = 40;
+        width = 600,
+        height = 200,
+        textSizeMultiplier = width/2000,
+        maxSize = 0,
+        treeData = [],
+        nameAccessor = function(d) { return d.name;},
+        valueAccessor = function(d) { return d.value;},
+        onClick = function(d) {},
+        mouseoverText = function(d) { return d.name;},
+        maxResults = 40,
         maxDepth = 20;
 
     function my(selection) {
@@ -24,57 +22,38 @@ d3.wordtree = function{
         
             var targetElementId = this.id;
             var targetElement = d3.select("#"+targetElementId);
-            
-            my.preTreeData([]);
-            my.postTreeData([]);
-            
-            if($("#svg").length == 0){
-                var svgElement = targetElement.append("svg:svg").attr("id","svg");
-                
-                svgElement.append("svg:g").attr("id","previs");
-                svgElement.append("svg:g").attr("id","vis");
+
+            my.treeData([]);
+
+            if(d3.select("#" + targetElementId + "svg").length == 0){
+                var svgElement = targetElement.append("svg:svg").attr("id",targetElementId + "svg");
+
+                svgElement.append("svg:g").attr("id", targetElementId + "vis");
             }
             
             var d3TreeLayout = d3.layout.tree();
             
             d3TreeLayout.size([my.height(), my.width()/2]);
         
-            d3.select("#svg")
+            d3.select("#" + targetElementId + "svg")
                 .attr("width", my.width() - (my.margins()[1] + my.margins()[3])+'px')
                 .attr("height", (my.height() - (my.margins()[0] + my.margins()[2])) + 'px');
             
-            d3.select("#vis")
-                .attr("transform", "translate(" + (((my.width())/2) + my.margins()[1]) + "," + my.margins()[0] + ")");	
-            
-            d3.select("#previs")
-                .attr("transform", "translate("+my.margins()[1]+"," + my.margins()[0] + ")");
+            d3.select("#" + targetElementId + "vis")
+                .attr("transform", "translate(" + (((my.width())/2) + my.margins()[1]) + "," + my.margins()[0] + ")");
                 
             var relevantData = extractRelevantData(d);
 
-            createTree(relevantData,searchTerm,function(error,errorText,postTreeData,preTreeData,d) {
-                my.preTreeData(preTreeData);
-                my.postTreeData(postTreeData);
-                if(preTreeData && postTreeData) {
-                    my.maxSize(Math.max(preTreeData.value,postTreeData.value));
-                } else if (preTreeData && !postTreeData) {
-                    my.maxSize(preTreeData.value);
-                    //If there is no postTree data we still need the term to be displayed     
-                } else {
-                    my.maxSize(postTreeData.value);
-                    $("#previs").empty();
-                }
-                        
-                var previs = d3.select("#previs");
-                var vis = d3.select("#vis");
-                previs.empty();
+            createTree(relevantData,searchTerm,function(error,errorText,treeData,d) {
+                my.treeData(treeData);
+
+                my.maxSize(treeData.value);
+
+                var vis = d3.select("#" + targetElementId + "vis")
                 vis.empty();
                 d3TreeLayout.size([my.height() - (my.margins()[0] + my.margins()[2]), my.width()/2 - (my.margins()[1] + my.margins()[3])]);
-                if (preTreeData) {
-                    update(preTreeData,"pre",d3.select("#previs"),d3TreeLayout); 
-                }
-                if (postTreeData) {
-                    update(postTreeData,"post",d3.select("#vis"),d3TreeLayout);        
-                }
+                update(treeData,vis,d3TreeLayout);
+
             });
         });
     }
@@ -188,10 +167,8 @@ d3.wordtree = function{
 
     function createTree(matchingTerms, searchTerm, callback) {
         //partially covered in qUnit
-        var postTree = [];
-        var preTree = [];
-        var postTreeData = [];
-        var preTreeData = [];
+        var tree = [];
+        var treeData = [];
         var error = false;
         var errorText = "";
         
@@ -200,21 +177,15 @@ d3.wordtree = function{
             searchTerm = searchTerm.replace(/ /g,"_");
         }
         
-        processTreeData(matchingTerms,searchTerm,postTreeData,preTreeData);
+        processTreeData(matchingTerms,searchTerm,treeData);
 
-        postTree = nestTreeData(postTreeData,searchTerm);
-        if (postTree == undefined) { 
+        tree = nestTreeData(treeData,searchTerm);
+        if (tree == undefined) {
             error=true;
-            errorText="Failed to process postTreeData";
-        }
-
-        preTree = nestTreeData(preTreeData,searchTerm);
-        if (preTree == undefined) {
-            error=true;
-            errorText="Failed to process preTreeData";
+            errorText="Failed to process treeData";
         }
         
-        callback(error,errorText,postTree,preTree,matchingTerms);
+        callback(error,errorText,tree,matchingTerms);
     }
     
     function extractRelevantData(inputData) {
@@ -501,91 +472,6 @@ d3.wordtree = function{
         return depthWidths;    
     }
 
-    function defineDragBehaviour(preOrPost) {
-        //What happens when you drag depends on what tree you're dragging on, so this sets up the drag behaviour accordingly
-        var drag = d3.behavior.drag()
-                    .origin(Object);
-                    if(preOrPost == "pre") {
-                            drag
-                                    .on("drag", dragmovePre)
-                                    .on("dragend", dragendPre);
-                    } else {
-                            drag
-                                    .on("drag", dragmovePost)
-                                    .on("dragend", dragendPost);
-                    }
-        return drag;
-    }
-    
-    function dragmovePre(d) {
-        dragmove(d,"pre");
-    }
-
-    function dragmovePost(d) {
-        dragmove(d,"post");
-    }
-
-    function dragmove(d,preOrPost) {
-        userDragging = true;
-        var verticalDistance = d.y - d3.event.y;
-        var dragLimit = 200;
-        var limitedVerticalDistance = Math.max(0,Math.min(-verticalDistance,dragLimit));
-        var leafArray = [];	
-        leafArray = getLeafArray(d,leafArray,true,preOrPost);
-
-        d3.select("#dragSlider")
-            .attr("transform","translate(-2," + limitedVerticalDistance + ")");
-            
-        var spacePerSibling = dragLimit/leafArray.length;
-        //Highlight the immediate children
-        var rootNode = getRoot(d);
-        var otherTreeData = getTreeData(getOther(preOrPost));
-        if(otherTreeData) {
-            var otherTreeRoot = getRoot(otherTreeData);
-            removeHighlight(otherTreeRoot,getOther(preOrPost));
-        }
-        removeHighlight(rootNode,preOrPost);
-
-        for (var i = 0; i < leafArray.length ; i++) {
-            var thisNode = getNodeFromBothTrees(leafArray[i].id);
-            if((limitedVerticalDistance > (i * spacePerSibling)) && (limitedVerticalDistance < (i + 1) * spacePerSibling)) {
-                highlightBothTrees(thisNode);
-            }
-        }
-    }
-    
-    function highlightBothTrees(thisNode) {
-        var expressionID = thisNode.matchingTermIndex;
-        highlightTree("pre",expressionID);
-        highlightTree("post",expressionID);
-    }
-    
-    function highlightTree(preOrPost,expressionID) {
-        var treeData = getTreeData(preOrPost);
-        if(treeData) {
-            recursivelySetHighlight(treeData,preOrPost,expressionID);
-        }
-    }
-    
-    function recursivelySetHighlight(node,preOrPost,expressionID) {
-        setHighlightIfExpressionIDMatches(node,expressionID,preOrPost);
-        for(var i = 0; i < node.children.length; i++) {
-            recursivelySetHighlight(node.children[i],preOrPost,expressionID);
-        }   
-    }
-    
-    function setHighlightIfExpressionIDMatches(node,expressionID,preOrPost) {
-        var nodeTermIndexArray = node.matchingTermIndex.split(",");
-        var expressionIDArray = expressionID.split(",");
-        for (var i = 0 ; i < nodeTermIndexArray.length ; i++) {
-            for (var j = 0 ; j < expressionIDArray.length ; j++) {
-                if (nodeTermIndexArray[i] == expressionIDArray[j]) {
-                    setHighlight(true,node,preOrPost);
-                }
-            }
-        }
-    }
-
     function testForCommonExpressionIndices(thisNodeTermIndices,matchingTermIndices) {
         //covered by qUnit
         var thisNodeTermIndexArray = thisNodeTermIndices.split(",");
@@ -662,56 +548,7 @@ d3.wordtree = function{
         return leafArray;
     }
     
-    
-    
-    function dragendPre(d) {
-        dragend(d,"pre");
-    }
 
-    function dragendPost(d) {
-        dragend(d,"post");
-    }
-
-    function dragend(d,preOrPost) {
-            userDragging = false;
-            hideDragAffordance();
-            var result = {};
-            var root = getRoot(d);
-            var otherTreeData = getTreeData(getOther(preOrPost));
-            var otherTreeRoot = getRoot(otherTreeData);
-            result = getHighlightedLeaf(root,otherTreeRoot);		
-            removeHighlight(root,preOrPost);
-            removeHighlight(otherTreeRoot,getOther(preOrPost));
-            var dragEndFunction = my.onDragEnd();
-            dragEndFunction(result);
-    }
-
-    function getHighlightedLeaf(root,otherTreeRoot) {
-        highlightedLeafInFirstTree = getHighlightFromTree(root);
-        if(highlightedLeafInFirstTree == false) {
-            return getHighlightFromTree(otherTreeRoot);
-        }
-        else {
-            return highlightedLeafInFirstTree;
-        }
-    }
-    
-    function getHighlightFromTree(node,preOrPost) {
-        var result = false;        
-        if(node) {
-            if(node.children.length>0) {
-                for(var i = 0; i<node.children.length; i++) {
-                    if (node.children[i].highlighted) {
-                        result = getHighlightFromTree(node.children[i],preOrPost);	
-                    }
-                }
-            } else {
-                result = node;
-                result.name = result.name.replace(/_/g,' ');
-            }
-        }
-        return result;
-    }
     
     function getRoot(node) {
         //recursively climbs the tree until it gets to the root node and returns it.
@@ -724,32 +561,6 @@ d3.wordtree = function{
             }
         }
         return false;
-    }
-
-    function setHighlight(on,node,preOrPost) {
-        node.highlighted = on;
-        if(on) {
-            d3.select("#" + preOrPost + "-" + node.id).attr("font-weight","bold");
-            d3.select("#" + preOrPost + "-link-" + node.id).attr("style","stroke:#ff0000;");
-        }
-        else 	{
-            d3.select("#" + preOrPost + "-" + node.id).attr("font-weight","normal");
-            d3.select("#" + preOrPost + "-link-" + node.id).attr("style","stroke:#ccc;");
-        }
-
-    }
-
-    function removeHighlight(node,preOrPost) {
-        //Looks for the child which is highlighted, 
-        //  unhighlights it and then removes highlight from its children
-        if(node) {
-            setHighlight(false,node,preOrPost);
-            for (var i = 0 ; i<node.children.length ; i++) {
-                if(node.children[i].highlighted == true) {
-                    removeHighlight(node.children[i],preOrPost);
-                }
-            }
-        }
     }
 
     function getTreeData(preOrPost) {
@@ -784,13 +595,16 @@ d3.wordtree = function{
         var marginForCircle = 20;
         var font = getFontSize(thisSize) + "px Helvetica";	
         //Create a hidden div with the content and measure its width
+        //TODO replace this with something which doesn't depend on jQuery.
+        /*
         var o = $('<div>' + text + '</div>')
                     .css({'position': 'absolute', 'float': 'left', 'white-space': 'nowrap', 'visibility': 'hidden', 'font': font})
-                    .appendTo($('body')),
+                    .appendTo(d3.select('body')),
             width = o.width();
 
         o.remove();
-
+        */
+        var width = 50;
         return width + marginForCircle;
     }
 
@@ -910,7 +724,7 @@ d3.wordtree = function{
 	search(searchTerm,function(error,errorText,postTree,preTree,data) { 
 		if(error)
 			{
-				$("#errorDiv").html(errorText).show().fadeOut(2000);	
+				d3.select("#errorDiv").html(errorText).show().fadeOut(2000);
 			}
 		else
 			
@@ -1026,64 +840,6 @@ DataTree.prototype.getChildIndex = function(Name) {
     return result;
 };
 
-function hideDragAffordance() {
-        if(!userDragging) {
-            d3.select("#dragAffordance").remove();
-        }
-    }
-
-function showDragAffordance(id, x, y, preOrPost) {
-        //partially covered by qUnit
-        if(!userDragging) {
-            
-            var dragAffordanceGroup;		
-            var thisX, thisY;
-             
-            dragAffordanceGroup = d3.select("#svg").append("svg:g");
-
-            $("#svg").mousemove(function(e) {
-                thisX = e.pageX - this.offsetLeft;
-                thisY = e.pageY - this.offsetTop;
-                if(!userDragging) {
-                    dragAffordanceGroup
-                        .attr("id","dragAffordance")
-                        .attr("transform","translate("+ (thisX-15) +","+ (thisY-10) + ")")
-                }
-            });
-
-            $("#"+preOrPost+"-"+id).attr("style","cursor:move;");
-
-                    var sliderTrack = dragAffordanceGroup.append("svg:rect")
-                            .attr("id","sliderTrack")
-                            .attr("width",6)
-                            .attr("rx",3)
-                            .attr("ry",3)
-                            .attr("fill","#ccc")
-                            .attr("stroke","#aaa")
-                            .attr("height",200)
-                            .attr("opacity",0.1)
-                .transition()
-                    .delay(200)
-                    .duration(500)
-                    .attr("opacity",0.5);
-
-
-            var slider = dragAffordanceGroup.append("svg:rect")
-                .attr("transform","translate(-2,0)")
-                .attr("id","dragSlider")
-                .attr("width",10)
-                .attr("height",10)
-                .attr("rx",3)
-                .attr("ry",3)
-                .attr("fill","#dadada")
-                .attr("stroke","#999")
-                .attr("opacity",0.1).transition()
-                    .delay(200)
-                    .duration(500)
-                    .attr("opacity",1);	
-        }
-    }
-    
     var userDragging = false;
 
     var nodeIDCounter = 0;
