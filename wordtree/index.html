@@ -4,6 +4,7 @@
         <title></title>
         <script src="http://d3js.org/d3.v2.js"></script>
         <script src="wordtree.js"></script>
+        <script src="../wordtree-processor/wordtree_processor.js"></script>
         <style>
             .node text {
                 fill: #1d1d1d;
@@ -22,7 +23,7 @@
         <div class="target">Hello again.</div>
         <div class="target">Hello a last time.</div>
         <script>
-            var chart = d3.wordtree();
+
             var data = [
                 {name:"this is a word",value:10},
                 {name:"this is something else",value:2},
@@ -30,9 +31,11 @@
             ];
 
             var selection = d3.select("#example");
+            var treeData = d3.wordtree_processor(data);
+            var chart = d3.wordtree;
 
             selection
-                    .datum(data)
+                    .datum(treeData)
                     .call(chart);
 
         </script>
