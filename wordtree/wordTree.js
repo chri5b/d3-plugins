@@ -10,6 +10,7 @@ d3.wordtree = function(){
         textSizeMultiplier = width/2000,
         maxSize = 0,
         treeData = [],
+        searchTerm = null,
         nameAccessor = function(d) { return d.name;},
         valueAccessor = function(d) { return d.value;},
         onClick = function(d) {},
@@ -18,46 +19,55 @@ d3.wordtree = function(){
         maxDepth = 20;
 
     function my(selection) {
-        selection.each(function(d,i) {
-        
-            var targetElementId = this.id;
-            var targetElement = d3.select("#"+targetElementId);
+        if (selection) {
+            selection.each(function(d,i) {
 
-            my.treeData([]);
+                var targetElementId = this.id;
+                var targetElement = d3.select("#" + targetElementId);
 
-            if(d3.select("#" + targetElementId + "svg").length == 0){
-                var svgElement = targetElement.append("svg:svg").attr("id",targetElementId + "svg");
+                my.treeData([]);
 
-                svgElement.append("svg:g").attr("id", targetElementId + "vis");
-            }
-            
-            var d3TreeLayout = d3.layout.tree();
-            
-            d3TreeLayout.size([my.height(), my.width()/2]);
-        
-            d3.select("#" + targetElementId + "svg")
-                .attr("width", my.width() - (my.margins()[1] + my.margins()[3])+'px')
-                .attr("height", (my.height() - (my.margins()[0] + my.margins()[2])) + 'px');
-            
-            d3.select("#" + targetElementId + "vis")
-                .attr("transform", "translate(" + (((my.width())/2) + my.margins()[1]) + "," + my.margins()[0] + ")");
-                
-            var relevantData = extractRelevantData(d);
+                if(d3.select("#" + targetElementId + "-svg")[0][0] == null){
+                    var svgElement = targetElement.append("svg:svg").attr("id",targetElementId + "-svg");
 
-            var searchTerm = relevantData[0].name.split(' ')[0];
+                    svgElement.append("svg:g").attr("id", targetElementId + "-vis");
+                }
 
-            createTree(relevantData,searchTerm,function(error,errorText,treeData,d) {
-                my.treeData(treeData);
+                var d3TreeLayout = d3.layout.tree();
 
-                my.maxSize(treeData.value);
+                d3TreeLayout.size([my.height(), my.width()/2]);
 
-                var vis = d3.select("#" + targetElementId + "vis")
-                vis.empty();
-                d3TreeLayout.size([my.height() - (my.margins()[0] + my.margins()[2]), my.width()/2 - (my.margins()[1] + my.margins()[3])]);
-                update(treeData,vis,d3TreeLayout);
+                d3.select("#" + targetElementId + "-svg")
+                    .attr("width", my.width() - (my.margins()[1] + my.margins()[3])+'px')
+                    .attr("height", (my.height() - (my.margins()[0] + my.margins()[2])) + 'px');
 
+                d3.select("#" + targetElementId + "-vis")
+                    .attr("transform", "translate(" + (((my.width())/2) + my.margins()[1]) + "," + my.margins()[0] + ")");
+
+                var relevantData = extractRelevantData(d);
+
+                var searchTerm;
+                if(my.searchTerm() == null) {
+                    //assume that the word to draw the tree from is the first word in the first line
+                    searchTerm = relevantData[0].name.split(' ')[0];
+                } else {
+                    searchTerm = my.searchTerm();
+                }
+
+
+                createTree(relevantData,searchTerm,function(error,errorText,treeData,d) {
+                    my.treeData(treeData);
+
+                    my.maxSize(treeData.value);
+
+                    var vis = d3.select("#" + targetElementId + "-vis")
+                    vis.empty();
+                    d3TreeLayout.size([my.height() - (my.margins()[0] + my.margins()[2]), my.width()/2 - (my.margins()[1] + my.margins()[3])]);
+                    update(treeData,vis,d3TreeLayout);
+
+                });
             });
-        });
+        }
     }
  
     // DISPLAY CONFIG
@@ -114,13 +124,6 @@ d3.wordtree = function(){
     my.onClick = function(value) {
         if (!arguments.length) return onClick;
         onClick = value;
-        return my;
-    }
-  
-    //function to be called when user has stopped dragging
-    my.onDragEnd = function(value) {
-        if (!arguments.length) return onDragEnd;
-        onDragEnd = value;
         return my;
     }
   
@@ -643,8 +646,6 @@ d3.wordtree = function(){
         var nodeEnter = nodes.enter().append("svg:g")
                 .attr("class", "node")
                 .attr("transform", function(d) { return "translate(" + source.y0 + "," + source.x0 + ")"; })
-                .attr("onmouseover", function(d,i) {return "showDragAffordance(" + d.id + "," + d.x + "," + d.y + ",'" + preOrPost + "')";})
-                .attr("onmouseout", function() {return "hideDragAffordance()"; })
                 .on("click", onClickBehaviour);
         
         //Add the circle

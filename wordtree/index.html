@@ -3,8 +3,18 @@
     <head>
         <title></title>
         <script src="http://d3js.org/d3.v2.js"></script>
-        <script src="wordTree.js"></script>
+        <script src="wordtree.js"></script>
+        <style>
+            .node text {
+                fill: #1d1d1d;
+            }
 
+            line.link, path.link{
+                fill: none;
+                stroke: #ccc;
+                opacity:0.2;
+            }
+        </style>
     </head>
     <body>
         <h1>Word Tree</h1>
