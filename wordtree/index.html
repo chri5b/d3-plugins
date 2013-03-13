@@ -32,7 +32,7 @@
 
             var selection = d3.select("#example");
             var treeData = d3.wordtree_processor(data);
-            var chart = d3.wordtree;
+            var chart = d3.wordtree();
 
             selection
                     .datum(treeData)

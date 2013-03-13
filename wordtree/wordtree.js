@@ -11,7 +11,8 @@ d3.wordtree = function(){
         maxSize = 0,
         treeData = [],
         onClick = function(d) {},
-        mouseoverText = function(d) { return d.name;};
+        mouseoverText = function(d) { return d.name;},
+        maxDepth = 20;
 
 
     function my(selection) {
@@ -73,9 +74,16 @@ d3.wordtree = function(){
         margins = value;
         return my;
     }
-  
 
-  
+    //Maximum depth of tree to render
+    my.maxDepth = function(value) {
+        if (!arguments.length) return maxDepth;
+        maxDepth = value;
+        return my;
+    };
+
+
+
     // INTERACTION CONFIG
     // specifies the text which should appear in the mouseover
     my.mouseoverText = function(value) { 
